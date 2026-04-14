@@ -1,0 +1,12 @@
+-- +goose Up
+CREATE TABLE IF NOT EXISTS withdrawals (
+    order_id BIGINT GENERATED ALWAYS AS IDENTITY,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    number VARCHAR(50) NOT NULL UNIQUE DEFAULT '',
+    sum INT NOT NULL DEFAULT 0,
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(order_id)
+);
+
+-- +goose Down
+DROP TABLE IF EXISTS withdrawals;
