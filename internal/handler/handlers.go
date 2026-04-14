@@ -494,7 +494,7 @@ func GetOrdersAccrual(cfg *config.Config) {
 	}
 
 	for _, order := range orders {
-		url := fmt.Sprintf("%s/api/orders/%s", cfg.ServerAddress, order)
+		url := fmt.Sprintf("%s/api/orders/%s", cfg.AccrualAddr, order)
 
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
