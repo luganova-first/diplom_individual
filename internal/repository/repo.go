@@ -147,7 +147,7 @@ func SelectUserOrders(cfg *config.Config, userID int64) ([]model.OrderItem, erro
 	for rows.Next() {
 		var number string
 		var status string
-		var accrual int
+		var accrual float32
 		var uploadedAt time.Time
 		err = rows.Scan(&number, &status, &accrual, &uploadedAt)
 		if err != nil {
@@ -173,7 +173,7 @@ func SelectUserOrders(cfg *config.Config, userID int64) ([]model.OrderItem, erro
 	return orders, nil
 }
 
-func InsertNewWithdraw(cfg *config.Config, userID int64, order string, sum int) error {
+func InsertNewWithdraw(cfg *config.Config, userID int64, order string, sum float32) error {
 	db, err := DB(cfg)
 	if err != nil {
 		return err
@@ -213,7 +213,7 @@ func SelectUserWithdrawals(cfg *config.Config, userID int64) ([]model.WithdrawOu
 	// пробегаем по всем записям
 	for rows.Next() {
 		var order string
-		var sum int
+		var sum float32
 		var processedAt time.Time
 		err = rows.Scan(&order, &sum, &processedAt)
 		if err != nil {
@@ -238,14 +238,14 @@ func SelectUserWithdrawals(cfg *config.Config, userID int64) ([]model.WithdrawOu
 	return withdrawals, nil
 }
 
-func SelectCurrent(cfg *config.Config, userID int64) (int64, error) {
+func SelectCurrent(cfg *config.Config, userID int64) (float32, error) {
 	db, err := DB(cfg)
 	if err != nil {
 		return 0, err
 	}
 	defer db.Close()
 
-	var sum sql.NullInt64
+	var sum float32
 
 	query := `
 		SELECT COALESCE(SUM(accrual), 0)
@@ -259,22 +259,17 @@ func SelectCurrent(cfg *config.Config, userID int64) (int64, error) {
 		return 0, err
 	}
 
-	// Если sum.Valid == false, значит SUM вернул NULL (нет записей)
-	if !sum.Valid {
-		return 0, nil
-	}
-
-	return sum.Int64, nil
+	return sum, nil
 }
 
-func SelectWithdrawn(cfg *config.Config, userID int64) (int64, error) {
+func SelectWithdrawn(cfg *config.Config, userID int64) (float32, error) {
 	db, err := DB(cfg)
 	if err != nil {
 		return 0, err
 	}
 	defer db.Close()
 
-	var sum sql.NullInt64
+	var sum float32
 
 	query := `
 		SELECT COALESCE(SUM(sum), 0)
@@ -287,12 +282,7 @@ func SelectWithdrawn(cfg *config.Config, userID int64) (int64, error) {
 		return 0, err
 	}
 
-	// Если sum.Valid == false, значит SUM вернул NULL (нет записей)
-	if !sum.Valid {
-		return 0, nil
-	}
-
-	return sum.Int64, nil
+	return sum, nil
 }
 
 func SelectOrdersForAccrual(cfg *config.Config) ([]string, error) {

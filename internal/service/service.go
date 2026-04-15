@@ -135,7 +135,7 @@ func (w *WithdrawService) CreateWithdraw(cfg *config.Config) error {
 	return nil
 }
 
-func GetCurrent(cfg *config.Config, userID int64) (int64, error) {
+func GetCurrent(cfg *config.Config, userID int64) (float32, error) {
 	current, err := repository.SelectCurrent(cfg, userID)
 	if err != nil {
 		return current, err
@@ -144,7 +144,7 @@ func GetCurrent(cfg *config.Config, userID int64) (int64, error) {
 	return current, nil
 }
 
-func GetWithdrawn(cfg *config.Config, userID int64) (int64, error) {
+func GetWithdrawn(cfg *config.Config, userID int64) (float32, error) {
 	withdrawn, err := repository.SelectWithdrawn(cfg, userID)
 	if err != nil {
 		return withdrawn, err

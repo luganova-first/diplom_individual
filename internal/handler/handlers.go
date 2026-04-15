@@ -351,7 +351,7 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 
 		balance := userCurrent - userWithdrawn
 
-		checkSum := int64(jsonData.Sum)
+		checkSum := float32(jsonData.Sum)
 		if checkSum > balance {
 			res.WriteHeader(http.StatusPaymentRequired)
 			return
