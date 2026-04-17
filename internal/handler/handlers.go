@@ -472,15 +472,17 @@ func GetBalance(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		log.Println("Current")
-		log.Println(userCurrent)
-
 		userWithdrawn, err := service.GetWithdrawn(cfg, u.UserID)
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		userCurrent = userCurrent - userWithdrawn
+
+		log.Println("Current")
+		log.Println(userCurrent)
 
 		log.Println("Withdrawn")
 		log.Println(userWithdrawn)
