@@ -369,6 +369,8 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 			Sum:    jsonData.Sum,
 		}
 
+		log.Println(jsonData)
+
 		err = withdraw.CreateWithdraw(cfg)
 		if err != nil {
 			log.Println(err)
@@ -509,6 +511,7 @@ func GetOrdersAccrual(cfg *config.Config) {
 	}
 
 	for _, order := range orders {
+		log.Printf("Проверяем заказ %s\n", order)
 		url := fmt.Sprintf("%s/api/orders/%s", cfg.AccrualAddr, order)
 
 		req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -550,6 +553,8 @@ func GetOrdersAccrual(cfg *config.Config) {
 				return
 			}
 
+			log.Println(jsonData)
+
 			err = service.UpdateOrder(cfg, jsonData)
 			if err != nil {
 				log.Println(err)
@@ -558,7 +563,6 @@ func GetOrdersAccrual(cfg *config.Config) {
 
 		case http.StatusNoContent:
 			log.Printf("Заказ %s не зарегистрирован в системе расчёта\n", order)
-			// Заказ не зарегистрирован - можно прекратить опрос или продолжить
 
 		case http.StatusTooManyRequests:
 			// Обработка ограничения частоты запросов
