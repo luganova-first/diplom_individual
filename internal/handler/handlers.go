@@ -279,9 +279,6 @@ func GetOrders(cfg *config.Config) http.HandlerFunc {
 		res.Header().Set("Content-Type", "application/json")
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(orders)
-
-		// Проверяем accrual по всем заказам
-		GetOrdersAccrual(cfg)
 	}
 }
 
@@ -369,9 +366,6 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 			Sum:    jsonData.Sum,
 		}
 
-		log.Println("11111111111111111")
-		log.Println(jsonData)
-
 		err = withdraw.CreateWithdraw(cfg)
 		if err != nil {
 			log.Println(err)
@@ -380,9 +374,6 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 		}
 
 		res.WriteHeader(http.StatusOK)
-
-		// Проверяем accrual по всем заказам
-		GetOrdersAccrual(cfg)
 	}
 }
 
@@ -412,9 +403,6 @@ func GetWithdrawals(cfg *config.Config) http.HandlerFunc {
 			res.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-
-		// Проверяем accrual по всем заказам
-		GetOrdersAccrual(cfg)
 
 		withdrawals, err := u.GetUserWithdrawals(cfg)
 		if err != nil {
@@ -480,12 +468,6 @@ func GetBalance(cfg *config.Config) http.HandlerFunc {
 		}
 
 		userCurrent = userCurrent - userWithdrawn
-
-		log.Println("Current")
-		log.Println(userCurrent)
-
-		log.Println("Withdrawn")
-		log.Println(userWithdrawn)
 
 		balance := model.Balance{
 			Current:   userCurrent,
@@ -561,9 +543,6 @@ func GetOrdersAccrual(cfg *config.Config) {
 				log.Println(err)
 				return
 			}
-
-			log.Println("22222222222222222222")
-			log.Println(jsonData)
 
 			err = service.UpdateOrder(cfg, jsonData)
 			if err != nil {
