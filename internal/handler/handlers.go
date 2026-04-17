@@ -229,6 +229,9 @@ func SetOrder(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
+		// Попробуем сразу же получить accrual по заказу
+		GetOrdersAccrual(cfg)
+
 		res.WriteHeader(http.StatusAccepted)
 	}
 }
