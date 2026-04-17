@@ -450,6 +450,9 @@ func GetBalance(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
+		// Перед балансом ещё раз проверяем Accrual по всем заказам
+		GetOrdersAccrual(cfg)
+
 		userCurrent, err := service.GetCurrent(cfg, u.UserID)
 		if err != nil {
 			log.Println(err)
