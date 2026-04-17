@@ -9,7 +9,7 @@ import (
 
 	"log"
 	"net/http"
-	// "time"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -23,15 +23,15 @@ func main() {
 		log.Fatal(err)
 	}
 
-	//ticker := time.NewTicker(2 * time.Second)
-	//defer ticker.Stop()
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
 
 	// Запускаем горутину запросов accrual
-	//go func() {
-	//	for range ticker.C {
-	//		handler.GetOrdersAccrual(cfg)
-	//	}
-	//}()
+	go func() {
+		for range ticker.C {
+			handler.GetOrdersAccrual(cfg)
+		}
+	}()
 
 	r := chi.NewRouter()
 
