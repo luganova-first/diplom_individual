@@ -369,6 +369,7 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 			Sum:    jsonData.Sum,
 		}
 
+		log.Println("11111111111111111")
 		log.Println(jsonData)
 
 		err = withdraw.CreateWithdraw(cfg)
@@ -471,12 +472,18 @@ func GetBalance(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
+		log.Println("Current")
+		log.Println(userCurrent)
+
 		userWithdrawn, err := service.GetWithdrawn(cfg, u.UserID)
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		log.Println("Withdrawn")
+		log.Println(userWithdrawn)
 
 		balance := model.Balance{
 			Current:   userCurrent,
@@ -553,6 +560,7 @@ func GetOrdersAccrual(cfg *config.Config) {
 				return
 			}
 
+			log.Println("22222222222222222222")
 			log.Println(jsonData)
 
 			err = service.UpdateOrder(cfg, jsonData)
