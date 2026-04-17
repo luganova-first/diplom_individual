@@ -229,10 +229,10 @@ func SetOrder(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
+		res.WriteHeader(http.StatusAccepted)
+
 		// Попробуем сразу же получить accrual по заказу
 		GetOrdersAccrual(cfg)
-
-		res.WriteHeader(http.StatusAccepted)
 	}
 }
 
@@ -374,6 +374,9 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 		}
 
 		res.WriteHeader(http.StatusOK)
+
+		// Проверяем accrual по всем заказам
+		GetOrdersAccrual(cfg)
 	}
 }
 
