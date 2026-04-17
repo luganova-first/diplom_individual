@@ -341,9 +341,6 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Проверяем accrual по всем заказам
-		GetOrdersAccrual(cfg)
-
 		userCurrent, err := service.GetCurrent(cfg, u.UserID)
 		if err != nil {
 			log.Println(err)
@@ -380,6 +377,9 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 		}
 
 		res.WriteHeader(http.StatusOK)
+
+		// Проверяем accrual по всем заказам
+		GetOrdersAccrual(cfg)
 	}
 }
 
