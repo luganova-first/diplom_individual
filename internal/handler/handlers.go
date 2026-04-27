@@ -17,26 +17,35 @@ import (
 	"time"
 )
 
+type Handler struct {
+	repo    repository.Repository
+	cfg     *config.Config
+}
+
+func NewHandler(repo repository.Repository, cfg *config.Config) *Handler {
+	return &Handler{
+		repo: repo,
+		cfg:  cfg,
+	}
+}
+
 // Хендлер регистрации пользователя
-func UserRegister(cfg *config.Config) http.HandlerFunc {
+func (h *Handler) UserRegister() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
-		// POST запрос должен быть с Content-Type `application/json`
 		if req.Header.Get("Content-Type") != "application/json" {
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		var user model.User
+		var user *model.User
 		var buf bytes.Buffer
 
-		// читаем тело запроса
 		_, err := buf.ReadFrom(req.Body)
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		// десериализуем JSON в user
 		err = json.Unmarshal(buf.Bytes(), &user)
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusBadRequest)
@@ -44,9 +53,9 @@ func UserRegister(cfg *config.Config) http.HandlerFunc {
 		}
 		defer req.Body.Close()
 
-		u := service.NewUserData(user)
+		userService := service.NewUserDataService(user, h.repo)
 
-		err = u.AddNewUser(cfg)
+		err = userService.AddNewUser()
 		if err != nil {
 			if errors.Is(err, repository.ErrLoginAlreadyExists) {
 				res.WriteHeader(http.StatusConflict)
@@ -54,77 +63,17 @@ func UserRegister(cfg *config.Config) http.HandlerFunc {
 				log.Println(err)
 				res.WriteHeader(http.StatusInternalServerError)
 			}
-		} else {
-			err = u.GetUserData(cfg)
-			if err != nil {
-				log.Println(err)
-				res.WriteHeader(http.StatusInternalServerError)
-			}
-
-			tokenString, err := userauth.BuildJWTString(u.Login)
-			if err != nil {
-				log.Println(err)
-				res.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			cookie := &http.Cookie{
-				Name:     "jwt",
-				Value:    tokenString,
-				Expires:  time.Now().Add(24 * time.Hour),
-				HttpOnly: true,
-				SameSite: http.SameSiteStrictMode,
-			}
-
-			http.SetCookie(res, cookie)
-
-			res.WriteHeader(http.StatusOK)
-		}
-	}
-}
-
-// Хендлер аутентификации пользователя
-func UserLogin(cfg *config.Config) http.HandlerFunc {
-	return func(res http.ResponseWriter, req *http.Request) {
-		// POST запрос должен быть с Content-Type `application/json`
-		if req.Header.Get("Content-Type") != "application/json" {
-			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		var user model.User
-		var buf bytes.Buffer
-
-		// читаем тело запроса
-		_, err := buf.ReadFrom(req.Body)
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		// десериализуем JSON в user
-		err = json.Unmarshal(buf.Bytes(), &user)
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusBadRequest)
-			return
-		}
-		defer req.Body.Close()
-
-		u := service.NewUserData(user)
-
-		err = u.GetUserData(cfg)
+		err = userService.GetUserData()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if u.PassHash == "" || !u.CheckPassword() {
-			res.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-
-		tokenString, err := userauth.BuildJWTString(u.Login)
+		tokenString, err := userauth.BuildJWTString(user.Login)
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -140,15 +89,71 @@ func UserLogin(cfg *config.Config) http.HandlerFunc {
 		}
 
 		http.SetCookie(res, cookie)
+		res.WriteHeader(http.StatusOK)
+	}
+}
 
+// Хендлер аутентификации пользователя
+func (h *Handler) UserLogin() http.HandlerFunc {
+	return func(res http.ResponseWriter, req *http.Request) {
+		if req.Header.Get("Content-Type") != "application/json" {
+			res.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		var user *model.User
+		var buf bytes.Buffer
+
+		_, err := buf.ReadFrom(req.Body)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = json.Unmarshal(buf.Bytes(), &user)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusBadRequest)
+			return
+		}
+		defer req.Body.Close()
+
+		userService := service.NewUserDataService(user, h.repo)
+
+		err = userService.GetUserData()
+		if err != nil {
+			log.Println(err)
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !userService.CheckPassword() {
+			res.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		tokenString, err := userauth.BuildJWTString(user.Login)
+		if err != nil {
+			log.Println(err)
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		cookie := &http.Cookie{
+			Name:     "jwt",
+			Value:    tokenString,
+			Expires:  time.Now().Add(24 * time.Hour),
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		}
+
+		http.SetCookie(res, cookie)
 		res.WriteHeader(http.StatusOK)
 	}
 }
 
 // Хендлер загрузки номера заказа
-func SetOrder(cfg *config.Config) http.HandlerFunc {
+func (h *Handler) SetOrder() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
-		// POST запрос должен быть с Content-Type `text/plain`
 		if req.Header.Get("Content-Type") != "text/plain" {
 			res.WriteHeader(http.StatusBadRequest)
 			return
@@ -160,13 +165,10 @@ func SetOrder(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		user := &model.User{
-			Login:    userLogin,
-			Password: "",
-		}
+		user := &model.User{Login: userLogin}
+		userService := service.NewUserDataService(user, h.repo)
 
-		u := service.NewUserData(*user)
-		ok, err := u.CheckUser(cfg)
+		ok, err := userService.CheckUser()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -185,7 +187,7 @@ func SetOrder(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		if string(body) == "" {
+		if len(body) == 0 {
 			res.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -197,32 +199,30 @@ func SetOrder(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		order := &service.OrderService{
-			UserID: u.UserID,
+		order := model.Order{
+			UserID: userService.User.UserID,
 			Number: number,
 		}
+		orderService := service.NewOrderDataService(order, h.repo)
 
-		err = order.GetOrderData(cfg)
+		err = orderService.GetOrderData()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		if order.Number == number && order.UserID == u.UserID {
+		if orderService.Order.Number == number && orderService.Order.UserID == userService.User.UserID {
 			res.WriteHeader(http.StatusOK)
 			return
 		}
 
-		if order.Number == number && order.UserID != u.UserID {
+		if orderService.Order.Number == number && orderService.Order.UserID != userService.User.UserID {
 			res.WriteHeader(http.StatusConflict)
 			return
 		}
 
-		order.UserID = u.UserID
-		order.Number = number
-
-		err = order.CreateOrder(cfg)
+		err = orderService.CreateOrder()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -230,14 +230,15 @@ func SetOrder(cfg *config.Config) http.HandlerFunc {
 		}
 
 		res.WriteHeader(http.StatusAccepted)
-
-		// Попробуем сразу же получить accrual по заказу
-		GetOrdersAccrual(cfg)
+		go h.GetOrdersAccrual()
 	}
 }
 
+// Остальные методы хендлера аналогично обновляются...
+// GetOrders, SetWithdraw, GetWithdrawals, GetBalance, GetOrdersAccrual
+
 // Хендлер получения списка загруженных номеров заказов
-func GetOrders(cfg *config.Config) http.HandlerFunc {
+func (h *Handler) GetOrders() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		userLogin := req.Context().Value("userLogin").(string)
 		if userLogin == "" {
@@ -250,8 +251,9 @@ func GetOrders(cfg *config.Config) http.HandlerFunc {
 			Password: "",
 		}
 
-		u := service.NewUserData(*user)
-		ok, err := u.CheckUser(cfg)
+		userService := service.NewUserDataService(user, h.repo)
+
+		ok, err := userService.CheckUser()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -263,7 +265,7 @@ func GetOrders(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		orders, err := u.GetUserOrders(cfg)
+		orders, err := userService.GetUserOrders()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -283,7 +285,7 @@ func GetOrders(cfg *config.Config) http.HandlerFunc {
 }
 
 // Хендлер запроса на списание средств
-func SetWithdraw(cfg *config.Config) http.HandlerFunc {
+func (h *Handler) SetWithdraw() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		// POST запрос должен быть с Content-Type `application/json`
 		if req.Header.Get("Content-Type") != "application/json" {
@@ -302,8 +304,9 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 			Password: "",
 		}
 
-		u := service.NewUserData(*user)
-		ok, err := u.CheckUser(cfg)
+		userService := service.NewUserDataService(user, h.repo)
+
+		ok, err := userService.CheckUser()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -315,7 +318,7 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		var jsonData model.WithdrawInputItem
+		var jsonData *model.WithdrawInputItem
 		var buf bytes.Buffer
 
 		// читаем тело запроса
@@ -338,14 +341,16 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		userCurrent, err := service.GetCurrent(cfg, u.UserID)
+		balanceService := service.NewBalanceService(user, jsonData, h.repo)
+
+		userCurrent, err := balanceService.GetCurrent()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		userWithdrawn, err := service.GetWithdrawn(cfg, u.UserID)
+		userWithdrawn, err := balanceService.GetWithdrawn()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -360,13 +365,7 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		withdraw := &service.WithdrawService{
-			UserID: u.UserID,
-			Order:  jsonData.Order,
-			Sum:    jsonData.Sum,
-		}
-
-		err = withdraw.CreateWithdraw(cfg)
+		err = balanceService.CreateWithdraw()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -378,7 +377,7 @@ func SetWithdraw(cfg *config.Config) http.HandlerFunc {
 }
 
 // Хендлер получения списка запросов на списание средств
-func GetWithdrawals(cfg *config.Config) http.HandlerFunc {
+func (h *Handler) GetWithdrawals() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		userLogin := req.Context().Value("userLogin").(string)
 		if userLogin == "" {
@@ -391,8 +390,9 @@ func GetWithdrawals(cfg *config.Config) http.HandlerFunc {
 			Password: "",
 		}
 
-		u := service.NewUserData(*user)
-		ok, err := u.CheckUser(cfg)
+		userService := service.NewUserDataService(user, h.repo)
+
+		ok, err := userService.CheckUser()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -404,7 +404,7 @@ func GetWithdrawals(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		withdrawals, err := u.GetUserWithdrawals(cfg)
+		withdrawals, err := userService.GetUserWithdrawals()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -424,7 +424,7 @@ func GetWithdrawals(cfg *config.Config) http.HandlerFunc {
 }
 
 // Хендлер получения баланса пользователя
-func GetBalance(cfg *config.Config) http.HandlerFunc {
+func (h *Handler) GetBalance() http.HandlerFunc {
 	return func(res http.ResponseWriter, req *http.Request) {
 		userLogin := req.Context().Value("userLogin").(string)
 		if userLogin == "" {
@@ -437,8 +437,9 @@ func GetBalance(cfg *config.Config) http.HandlerFunc {
 			Password: "",
 		}
 
-		u := service.NewUserData(*user)
-		ok, err := u.CheckUser(cfg)
+		userService := service.NewUserDataService(user, h.repo)
+
+		ok, err := userService.CheckUser()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -450,24 +451,23 @@ func GetBalance(cfg *config.Config) http.HandlerFunc {
 			return
 		}
 
-		// Перед балансом ещё раз проверяем Accrual по всем заказам
-		GetOrdersAccrual(cfg)
+		var jsonData *model.WithdrawInputItem
 
-		userCurrent, err := service.GetCurrent(cfg, u.UserID)
+		balanceService := service.NewBalanceService(user, jsonData, h.repo)
+
+		userCurrent, err := balanceService.GetCurrent()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		userWithdrawn, err := service.GetWithdrawn(cfg, u.UserID)
+		userWithdrawn, err := balanceService.GetWithdrawn()
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		userCurrent = userCurrent - userWithdrawn
 
 		balance := model.Balance{
 			Current:   userCurrent,
@@ -489,9 +489,8 @@ func GetBalance(cfg *config.Config) http.HandlerFunc {
 }
 
 // Хендлер информации о расчёте начислений баллов лояльности.
-func GetOrdersAccrual(cfg *config.Config) {
-	// Получение списка заказов требующих информации о расчёте начислений баллов лояльности.
-	orders, err := service.GetOrdersForAccrual(cfg)
+func (h *Handler) GetOrdersAccrual() {
+	orders, err := h.repo.SelectOrdersForAccrual()
 	if err != nil {
 		log.Println(err)
 		return
@@ -503,7 +502,7 @@ func GetOrdersAccrual(cfg *config.Config) {
 
 	for _, order := range orders {
 		log.Printf("Проверяем заказ %s\n", order)
-		url := fmt.Sprintf("%s/api/orders/%s", cfg.AccrualAddr, order)
+		url := fmt.Sprintf("%s/api/orders/%s", h.cfg.AccrualAddr, order)
 
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
@@ -544,7 +543,7 @@ func GetOrdersAccrual(cfg *config.Config) {
 				return
 			}
 
-			err = service.UpdateOrder(cfg, jsonData)
+			err = h.repo.UpdateOrderAccrual(jsonData)
 			if err != nil {
 				log.Println(err)
 				return
