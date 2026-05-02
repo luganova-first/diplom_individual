@@ -15,12 +15,8 @@ func NewBalanceService(user *model.User, withdraw *model.WithdrawInputItem, repo
 	return &BalanceService{
 		User: &model.UserData{
 			Login:    user.Login,
-			Password: user.Password,
 		},
-		Withdraw: &model.WithdrawInputItem{
-			Order:    withdraw.Order,
-			Sum: withdraw.Sum,
-		},
+		Withdraw: withdraw,
 		WithdrawRepo: repo,
 	}
 }
