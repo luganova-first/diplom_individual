@@ -18,8 +18,8 @@ import (
 )
 
 type Handler struct {
-	repo    repository.Repository
-	cfg     *config.Config
+	repo repository.Repository
+	cfg  *config.Config
 }
 
 func NewHandler(repo repository.Repository, cfg *config.Config) *Handler {
@@ -212,16 +212,17 @@ func (h *Handler) SetOrder() http.HandlerFunc {
 			return
 		}
 
-		if orderService.Order.Number == number && orderService.Order.UserID == userService.User.UserID {
+		if orderService.Order.OrderID > 0 && orderService.Order.Number == number && orderService.Order.UserID == userService.User.UserID {
 			res.WriteHeader(http.StatusOK)
 			return
 		}
 
-		if orderService.Order.Number == number && orderService.Order.UserID != userService.User.UserID {
+		if orderService.Order.OrderID > 0 && orderService.Order.Number == number && orderService.Order.UserID != userService.User.UserID {
 			res.WriteHeader(http.StatusConflict)
 			return
 		}
 
+		orderService.Order.UserID = userService.User.UserID
 		err = orderService.CreateOrder()
 		if err != nil {
 			log.Println(err)

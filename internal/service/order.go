@@ -12,8 +12,11 @@ type OrderDataService struct {
 
 func NewOrderDataService(order model.Order, repo repository.OrderRepository) *OrderDataService {
 	return &OrderDataService{
-		Order: &order,
-		Repo:  repo,
+		Order: &model.Order{
+			UserID: order.UserID,
+			Number: order.Number,
+		},
+		Repo: repo,
 	}
 }
 
