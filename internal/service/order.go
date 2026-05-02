@@ -26,7 +26,11 @@ func (s *OrderDataService) GetOrderData() error {
 	if err != nil {
 		return err
 	}
-	s.Order = &orderData
+	s.Order.OrderID = orderData.OrderID
+	s.Order.UserID = orderData.UserID
+	s.Order.Status = orderData.Status
+	s.Order.Accrual = orderData.Accrual
+	s.Order.UploadedAt = orderData.UploadedAt
 	return nil
 }
 
