@@ -545,11 +545,11 @@ func (h *Handler) GetOrdersAccrual() {
 			}
 
 			order := model.Order{
-				Number:  jsonData.Order,
-				Status:  jsonData.Status,
-				Accrual: jsonData.Accrual,
+				Number: jsonData.Order,
 			}
 			orderService := service.NewOrderDataService(order, h.repo)
+			orderService.Order.Status = jsonData.Status
+			orderService.Order.Accrual = jsonData.Accrual
 
 			err = orderService.UpdateOrder()
 			if err != nil {
