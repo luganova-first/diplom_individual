@@ -17,7 +17,7 @@ import (
 var ErrLoginAlreadyExists = errors.New("login already exists")
 
 type PostgresRepository struct {
-	db *sql.DB
+	db  *sql.DB
 	cfg *config.Config
 }
 
@@ -32,7 +32,7 @@ func NewPostgresRepository(cfg *config.Config) (*PostgresRepository, error) {
 	}
 
 	return &PostgresRepository{
-		db: db,
+		db:  db,
 		cfg: cfg,
 	}, nil
 }
@@ -223,13 +223,13 @@ func (r *PostgresRepository) SelectOrdersForAccrual() ([]string, error) {
 	return orders, rows.Err()
 }
 
-func (r *PostgresRepository) UpdateOrderAccrual(orderData model.OrderAccrual) error {
+func (r *PostgresRepository) UpdateOrderAccrual(number string, status string, accrual float32) error {
 	query := `
 		UPDATE orders
 		SET status = $1, accrual = $2
 		WHERE number = $3
 	`
-	result, err := r.db.Exec(query, orderData.Status, orderData.Accrual, orderData.Order)
+	result, err := r.db.Exec(query, status, accrual, number)
 	if err != nil {
 		return err
 	}

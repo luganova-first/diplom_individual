@@ -37,8 +37,8 @@ func (s *OrderDataService) GetOrderData() error {
 	return nil
 }
 
-func (s *OrderDataService) UpdateOrder(orderData model.OrderAccrual) error {
-	return s.Repo.UpdateOrderAccrual(orderData)
+func (s *OrderDataService) UpdateOrder() error {
+	return s.Repo.UpdateOrderAccrual(s.Order.Number, s.Order.Status, s.Order.Accrual)
 }
 
 func (s *OrderDataService) GetOrdersForAccrual() ([]string, error) {

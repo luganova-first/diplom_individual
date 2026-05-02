@@ -544,7 +544,14 @@ func (h *Handler) GetOrdersAccrual() {
 				return
 			}
 
-			err = h.repo.UpdateOrderAccrual(jsonData)
+			order := model.Order{
+				Number:  jsonData.Order,
+				Status:  jsonData.Status,
+				Accrual: jsonData.Accrual,
+			}
+			orderService := service.NewOrderDataService(order, h.repo)
+
+			err = orderService.UpdateOrder()
 			if err != nil {
 				log.Println(err)
 				return

@@ -15,7 +15,7 @@ type OrderRepository interface {
 	SelectOrder(number string) (model.Order, error)
 	SelectUserOrders(userID int64) ([]model.OrderItem, error)
 	SelectOrdersForAccrual() ([]string, error)
-	UpdateOrderAccrual(orderData model.OrderAccrual) error
+	UpdateOrderAccrual(number string, status string, accrual float32) error
 }
 
 type WithdrawRepository interface {
