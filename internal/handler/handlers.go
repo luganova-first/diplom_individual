@@ -231,12 +231,9 @@ func (h *Handler) SetOrder() http.HandlerFunc {
 		}
 
 		res.WriteHeader(http.StatusAccepted)
-		go h.GetOrdersAccrual()
+		h.GetOrdersAccrual()
 	}
 }
-
-// Остальные методы хендлера аналогично обновляются...
-// GetOrders, SetWithdraw, GetWithdrawals, GetBalance, GetOrdersAccrual
 
 // Хендлер получения списка загруженных номеров заказов
 func (h *Handler) GetOrders() http.HandlerFunc {
