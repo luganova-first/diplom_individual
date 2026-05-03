@@ -342,7 +342,7 @@ func (h *Handler) SetWithdraw() http.HandlerFunc {
 			return
 		}
 
-		balanceService := service.NewBalanceService(user, jsonData, h.repo)
+		balanceService := service.NewBalanceService(userService.User, jsonData, h.repo)
 
 		userCurrent, err := balanceService.GetCurrent()
 		if err != nil {
@@ -454,7 +454,7 @@ func (h *Handler) GetBalance() http.HandlerFunc {
 
 		var jsonData *model.WithdrawInputItem
 
-		balanceService := service.NewBalanceService(user, jsonData, h.repo)
+		balanceService := service.NewBalanceService(userService.User, jsonData, h.repo)
 
 		userCurrent, err := balanceService.GetCurrent()
 		if err != nil {

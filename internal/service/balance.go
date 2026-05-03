@@ -6,17 +6,18 @@ import (
 )
 
 type BalanceService struct {
-	User     *model.UserData
-	Withdraw *model.WithdrawInputItem
+	User         *model.UserData
+	Withdraw     *model.WithdrawInputItem
 	WithdrawRepo repository.WithdrawRepository
 }
 
-func NewBalanceService(user *model.User, withdraw *model.WithdrawInputItem, repo repository.Repository) *BalanceService {
+func NewBalanceService(user *model.UserData, withdraw *model.WithdrawInputItem, repo repository.Repository) *BalanceService {
 	return &BalanceService{
 		User: &model.UserData{
-			Login:    user.Login,
+			Login:  user.Login,
+			UserID: user.UserID,
 		},
-		Withdraw: withdraw,
+		Withdraw:     withdraw,
 		WithdrawRepo: repo,
 	}
 }
