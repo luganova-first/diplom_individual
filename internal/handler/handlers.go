@@ -469,9 +469,7 @@ func (h *Handler) GetBalance() http.HandlerFunc {
 			return
 		}
 
-		log.Println("BBBBBB111111111")
-		log.Println(userCurrent)
-		log.Println(userWithdrawn)
+		userCurrent = userCurrent - userWithdrawn
 
 		balance := model.Balance{
 			Current:   userCurrent,
