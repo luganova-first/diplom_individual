@@ -339,6 +339,8 @@ func (h *Handler) SetWithdraw() http.HandlerFunc {
 			return
 		}
 
+		log.Println(jsonData)
+
 		balanceService := service.NewBalanceService(userService.User, jsonData, h.repo)
 
 		userCurrent, err := balanceService.GetCurrent()
@@ -466,6 +468,10 @@ func (h *Handler) GetBalance() http.HandlerFunc {
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		log.Println("BBBBBB111111111")
+		log.Println(userCurrent)
+		log.Println(userWithdrawn)
 
 		balance := model.Balance{
 			Current:   userCurrent,
