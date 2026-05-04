@@ -81,7 +81,7 @@ func (r *PostgresRepository) InsertNewUser(ctx context.Context, login string, pa
 }
 
 func (r *PostgresRepository) SelectUserData(ctx context.Context, login string) (int64, string, error) {
-	row := r.pool.QueryRow(ctx, "SELECT id, login, password_hash FROM users WHERE login = $1", login)
+	row := r.pool.QueryRow(ctx, "SELECT user_id, login, password_hash FROM users WHERE login = $1", login)
 
 	var userID int64
 	var userLogin string
