@@ -13,8 +13,8 @@ import (
 	"github.com/luganova-first/diplom_individual/internal/config"
 	"github.com/luganova-first/diplom_individual/internal/handler"
 	"github.com/luganova-first/diplom_individual/internal/logger"
-	"github.com/luganova-first/diplom_individual/internal/userauth"
 	"github.com/luganova-first/diplom_individual/internal/repository"
+	"github.com/luganova-first/diplom_individual/internal/userauth"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// Инициализируем репозиторий
-	repo, err := repository.NewPostgresRepository(cfg)
+	repo, err := repository.NewPostgresRepository(context.Background(), cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

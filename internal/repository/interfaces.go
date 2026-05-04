@@ -1,28 +1,29 @@
 package repository
 
 import (
+	"context"
 	"github.com/luganova-first/diplom_individual/internal/model"
 )
 
 type UserRepository interface {
-	InsertNewUser(login string, passHash string) error
-	SelectUserData(login string) (int64, string, error)
-	CheckUserExists(login string) (bool, error)
+	InsertNewUser(ctx context.Context, login string, passHash string) error
+	SelectUserData(ctx context.Context, login string) (int64, string, error)
+	CheckUserExists(ctx context.Context, login string) (bool, error)
 }
 
 type OrderRepository interface {
-	InsertNewOrder(userID int64, number string) error
-	SelectOrder(number string) (model.Order, error)
-	SelectUserOrders(userID int64) ([]model.OrderItem, error)
-	SelectOrdersForAccrual() ([]string, error)
-	UpdateOrderAccrual(number string, status string, accrual float32) error
+	InsertNewOrder(ctx context.Context, userID int64, number string) error
+	SelectOrder(ctx context.Context, number string) (model.Order, error)
+	SelectUserOrders(ctx context.Context, userID int64) ([]model.OrderItem, error)
+	SelectOrdersForAccrual(ctx context.Context) ([]string, error)
+	UpdateOrderAccrual(ctx context.Context, number string, status string, accrual float32) error
 }
 
 type WithdrawRepository interface {
-	InsertNewWithdraw(userID int64, order string, sum float32) error
-	SelectUserWithdrawals(userID int64) ([]model.WithdrawOutputItem, error)
-	SelectCurrent(userID int64) (float32, error)
-	SelectWithdrawn(userID int64) (float32, error)
+	InsertNewWithdraw(ctx context.Context, userID int64, order string, sum float32) error
+	SelectUserWithdrawals(ctx context.Context, userID int64) ([]model.WithdrawOutputItem, error)
+	SelectCurrent(ctx context.Context, userID int64) (float32, error)
+	SelectWithdrawn(ctx context.Context, userID int64) (float32, error)
 }
 
 // Composite интерфейс для удобства

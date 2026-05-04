@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/luganova-first/diplom_individual/internal/model"
 	"github.com/luganova-first/diplom_individual/internal/repository"
 )
@@ -23,13 +24,13 @@ func NewBalanceService(user *model.UserData, withdraw *model.WithdrawInputItem, 
 }
 
 func (s *BalanceService) GetCurrent() (float32, error) {
-	return s.WithdrawRepo.SelectCurrent(s.User.UserID)
+	return s.WithdrawRepo.SelectCurrent(context.Background(), s.User.UserID)
 }
 
 func (s *BalanceService) GetWithdrawn() (float32, error) {
-	return s.WithdrawRepo.SelectWithdrawn(s.User.UserID)
+	return s.WithdrawRepo.SelectWithdrawn(context.Background(), s.User.UserID)
 }
 
 func (s *BalanceService) CreateWithdraw() error {
-	return s.WithdrawRepo.InsertNewWithdraw(s.User.UserID, s.Withdraw.Order, s.Withdraw.Sum)
+	return s.WithdrawRepo.InsertNewWithdraw(context.Background(), s.User.UserID, s.Withdraw.Order, s.Withdraw.Sum)
 }

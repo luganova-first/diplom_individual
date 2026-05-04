@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -339,8 +340,6 @@ func (h *Handler) SetWithdraw() http.HandlerFunc {
 			return
 		}
 
-		log.Println(jsonData)
-
 		balanceService := service.NewBalanceService(userService.User, jsonData, h.repo)
 
 		userCurrent, err := balanceService.GetCurrent()
@@ -492,7 +491,7 @@ func (h *Handler) GetBalance() http.HandlerFunc {
 
 // Хендлер информации о расчёте начислений баллов лояльности.
 func (h *Handler) GetOrdersAccrual() {
-	orders, err := h.repo.SelectOrdersForAccrual()
+	orders, err := h.repo.SelectOrdersForAccrual(context.Background())
 	if err != nil {
 		log.Println(err)
 		return

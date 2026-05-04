@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/luganova-first/diplom_individual/internal/config"
 	"github.com/luganova-first/diplom_individual/internal/model"
@@ -17,32 +19,57 @@ import (
 var ErrLoginAlreadyExists = errors.New("login already exists")
 
 type PostgresRepository struct {
-	db  *sql.DB
-	cfg *config.Config
+	pool *pgxpool.Pool
+	cfg  *config.Config
 }
 
-func NewPostgresRepository(cfg *config.Config) (*PostgresRepository, error) {
-	db, err := sql.Open("pgx", cfg.DBconnStr)
+func NewPostgresRepository(ctx context.Context, cfg *config.Config) (*PostgresRepository, error) {
+	pool, err := pgxpool.New(ctx, cfg.DBconnStr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}
 
-	if err := UpDBMigrations(db); err != nil {
+	// Проверяем соединение
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	// Для миграций нам нужно создать временное sql.DB соединение
+	// Используем ту же строку подключения, но через stdlib
+	// Миграции не поддерживают pgxpool напрямую
+	sqlDB, err := createSQLDBForMigrations(cfg.DBconnStr)
+	if err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("failed to create sql.DB for migrations: %w", err)
+	}
+	defer sqlDB.Close()
+
+	if err := UpDBMigrations(sqlDB); err != nil {
+		pool.Close()
 		return nil, err
 	}
 
 	return &PostgresRepository{
-		db:  db,
-		cfg: cfg,
+		pool: pool,
+		cfg:  cfg,
 	}, nil
 }
 
-func (r *PostgresRepository) Close() error {
-	return r.db.Close()
+// Вспомогательная функция для создания sql.DB только для миграций
+func createSQLDBForMigrations(connStr string) (*sql.DB, error) {
+	// Здесь мы временно используем database/sql для миграций
+	// так как goose требует sql.DB
+	return sql.Open("pgx", connStr)
 }
 
-func (r *PostgresRepository) InsertNewUser(login string, passHash string) error {
-	_, err := r.db.Exec("INSERT INTO users (login, password_hash) VALUES ($1, $2)", login, passHash)
+func (r *PostgresRepository) Close() error {
+	r.pool.Close()
+	return nil
+}
+
+func (r *PostgresRepository) InsertNewUser(ctx context.Context, login string, passHash string) error {
+	_, err := r.pool.Exec(ctx, "INSERT INTO users (login, password_hash) VALUES ($1, $2)", login, passHash)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
@@ -53,15 +80,15 @@ func (r *PostgresRepository) InsertNewUser(login string, passHash string) error 
 	return nil
 }
 
-func (r *PostgresRepository) SelectUserData(login string) (int64, string, error) {
-	row := r.db.QueryRowContext(context.Background(), "SELECT * FROM users WHERE login = $1", login)
+func (r *PostgresRepository) SelectUserData(ctx context.Context, login string) (int64, string, error) {
+	row := r.pool.QueryRow(ctx, "SELECT id, login, password_hash FROM users WHERE login = $1", login)
 
 	var userID int64
 	var userLogin string
 	var passwordHash string
 	err := row.Scan(&userID, &userLogin, &passwordHash)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return 0, "", nil
 		}
 		return 0, "", err
@@ -70,25 +97,25 @@ func (r *PostgresRepository) SelectUserData(login string) (int64, string, error)
 	return userID, passwordHash, nil
 }
 
-func (r *PostgresRepository) CheckUserExists(login string) (bool, error) {
+func (r *PostgresRepository) CheckUserExists(ctx context.Context, login string) (bool, error) {
 	var exists bool
 	query := "SELECT EXISTS(SELECT 1 FROM users WHERE login = $1)"
-	err := r.db.QueryRowContext(context.Background(), query, login).Scan(&exists)
+	err := r.pool.QueryRow(ctx, query, login).Scan(&exists)
 	return exists, err
 }
 
-func (r *PostgresRepository) InsertNewOrder(userID int64, number string) error {
-	_, err := r.db.Exec("INSERT INTO orders (user_id, number) VALUES ($1, $2)", userID, number)
+func (r *PostgresRepository) InsertNewOrder(ctx context.Context, userID int64, number string) error {
+	_, err := r.pool.Exec(ctx, "INSERT INTO orders (user_id, number) VALUES ($1, $2)", userID, number)
 	return err
 }
 
-func (r *PostgresRepository) SelectOrder(number string) (model.Order, error) {
+func (r *PostgresRepository) SelectOrder(ctx context.Context, number string) (model.Order, error) {
 	var o model.Order
-	row := r.db.QueryRowContext(context.Background(), "SELECT * FROM orders WHERE number = $1", number)
+	row := r.pool.QueryRow(ctx, "SELECT order_id, user_id, number, status, accrual, uploaded_at FROM orders WHERE number = $1", number)
 
 	err := row.Scan(&o.OrderID, &o.UserID, &o.Number, &o.Status, &o.Accrual, &o.UploadedAt)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return o, nil
 		}
 		return o, err
@@ -96,7 +123,7 @@ func (r *PostgresRepository) SelectOrder(number string) (model.Order, error) {
 	return o, nil
 }
 
-func (r *PostgresRepository) SelectUserOrders(userID int64) ([]model.OrderItem, error) {
+func (r *PostgresRepository) SelectUserOrders(ctx context.Context, userID int64) ([]model.OrderItem, error) {
 	var orders []model.OrderItem
 
 	query := `
@@ -106,7 +133,7 @@ func (r *PostgresRepository) SelectUserOrders(userID int64) ([]model.OrderItem, 
 		ORDER BY uploaded_at DESC
 	`
 
-	rows, err := r.db.QueryContext(context.Background(), query, userID)
+	rows, err := r.pool.Query(ctx, query, userID)
 	if err != nil {
 		return orders, err
 	}
@@ -134,12 +161,12 @@ func (r *PostgresRepository) SelectUserOrders(userID int64) ([]model.OrderItem, 
 	return orders, rows.Err()
 }
 
-func (r *PostgresRepository) InsertNewWithdraw(userID int64, order string, sum float32) error {
-	_, err := r.db.Exec("INSERT INTO withdrawals (user_id, number, sum) VALUES ($1, $2, $3)", userID, order, sum)
+func (r *PostgresRepository) InsertNewWithdraw(ctx context.Context, userID int64, order string, sum float32) error {
+	_, err := r.pool.Exec(ctx, "INSERT INTO withdrawals (user_id, number, sum) VALUES ($1, $2, $3)", userID, order, sum)
 	return err
 }
 
-func (r *PostgresRepository) SelectUserWithdrawals(userID int64) ([]model.WithdrawOutputItem, error) {
+func (r *PostgresRepository) SelectUserWithdrawals(ctx context.Context, userID int64) ([]model.WithdrawOutputItem, error) {
 	var withdrawals []model.WithdrawOutputItem
 
 	query := `
@@ -149,7 +176,7 @@ func (r *PostgresRepository) SelectUserWithdrawals(userID int64) ([]model.Withdr
 		ORDER BY processed_at DESC
 	`
 
-	rows, err := r.db.QueryContext(context.Background(), query, userID)
+	rows, err := r.pool.Query(ctx, query, userID)
 	if err != nil {
 		return withdrawals, err
 	}
@@ -175,7 +202,7 @@ func (r *PostgresRepository) SelectUserWithdrawals(userID int64) ([]model.Withdr
 	return withdrawals, rows.Err()
 }
 
-func (r *PostgresRepository) SelectCurrent(userID int64) (float32, error) {
+func (r *PostgresRepository) SelectCurrent(ctx context.Context, userID int64) (float32, error) {
 	var sum float32
 	query := `
 		SELECT COALESCE(SUM(accrual), 0)
@@ -183,29 +210,29 @@ func (r *PostgresRepository) SelectCurrent(userID int64) (float32, error) {
 		WHERE user_id = $1
 		AND status = 'PROCESSED'
 	`
-	err := r.db.QueryRowContext(context.Background(), query, userID).Scan(&sum)
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&sum)
 	return sum, err
 }
 
-func (r *PostgresRepository) SelectWithdrawn(userID int64) (float32, error) {
+func (r *PostgresRepository) SelectWithdrawn(ctx context.Context, userID int64) (float32, error) {
 	var sum float32
 	query := `
 		SELECT COALESCE(SUM(sum), 0)
 		FROM withdrawals
 		WHERE user_id = $1
 	`
-	err := r.db.QueryRowContext(context.Background(), query, userID).Scan(&sum)
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&sum)
 	return sum, err
 }
 
-func (r *PostgresRepository) SelectOrdersForAccrual() ([]string, error) {
+func (r *PostgresRepository) SelectOrdersForAccrual(ctx context.Context) ([]string, error) {
 	var orders []string
 	query := `
 		SELECT number
 		FROM orders
 		WHERE status IN ('NEW', 'PROCESSING')
 	`
-	rows, err := r.db.QueryContext(context.Background(), query)
+	rows, err := r.pool.Query(ctx, query)
 	if err != nil {
 		return orders, err
 	}
@@ -223,23 +250,18 @@ func (r *PostgresRepository) SelectOrdersForAccrual() ([]string, error) {
 	return orders, rows.Err()
 }
 
-func (r *PostgresRepository) UpdateOrderAccrual(number string, status string, accrual float32) error {
+func (r *PostgresRepository) UpdateOrderAccrual(ctx context.Context, number string, status string, accrual float32) error {
 	query := `
 		UPDATE orders
 		SET status = $1, accrual = $2
 		WHERE number = $3
 	`
-	result, err := r.db.Exec(query, status, accrual, number)
+	cmdTag, err := r.pool.Exec(ctx, query, status, accrual, number)
 	if err != nil {
 		return err
 	}
 
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if affected == 0 {
+	if cmdTag.RowsAffected() == 0 {
 		return errors.New("order not found")
 	}
 	return nil

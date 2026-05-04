@@ -1,14 +1,15 @@
 package service
 
 import (
+	"context"
 	"github.com/luganova-first/diplom_individual/internal/model"
 	"github.com/luganova-first/diplom_individual/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type UserDataService struct {
-	User     *model.UserData
-	Repo     repository.UserRepository
+	User *model.UserData
+	Repo repository.UserRepository
 }
 
 func NewUserDataService(user *model.User, repo repository.UserRepository) *UserDataService {
@@ -39,11 +40,11 @@ func (s *UserDataService) AddNewUser() error {
 	if err := s.hashPassword(); err != nil {
 		return err
 	}
-	return s.Repo.InsertNewUser(s.User.Login, s.User.PassHash)
+	return s.Repo.InsertNewUser(context.Background(), s.User.Login, s.User.PassHash)
 }
 
 func (s *UserDataService) GetUserData() error {
-	userID, passHash, err := s.Repo.SelectUserData(s.User.Login)
+	userID, passHash, err := s.Repo.SelectUserData(context.Background(), s.User.Login)
 	if err != nil {
 		return err
 	}
@@ -60,9 +61,9 @@ func (s *UserDataService) CheckUser() (bool, error) {
 }
 
 func (s *UserDataService) GetUserOrders() ([]model.OrderItem, error) {
-	return s.Repo.(repository.OrderRepository).SelectUserOrders(s.User.UserID)
+	return s.Repo.(repository.OrderRepository).SelectUserOrders(context.Background(), s.User.UserID)
 }
 
 func (s *UserDataService) GetUserWithdrawals() ([]model.WithdrawOutputItem, error) {
-	return s.Repo.(repository.WithdrawRepository).SelectUserWithdrawals(s.User.UserID)
+	return s.Repo.(repository.WithdrawRepository).SelectUserWithdrawals(context.Background(), s.User.UserID)
 }

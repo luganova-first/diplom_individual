@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/luganova-first/diplom_individual/internal/model"
 	"github.com/luganova-first/diplom_individual/internal/repository"
 )
@@ -21,11 +22,11 @@ func NewOrderDataService(order model.Order, repo repository.OrderRepository) *Or
 }
 
 func (s *OrderDataService) CreateOrder() error {
-	return s.Repo.InsertNewOrder(s.Order.UserID, s.Order.Number)
+	return s.Repo.InsertNewOrder(context.Background(), s.Order.UserID, s.Order.Number)
 }
 
 func (s *OrderDataService) GetOrderData() error {
-	orderData, err := s.Repo.SelectOrder(s.Order.Number)
+	orderData, err := s.Repo.SelectOrder(context.Background(), s.Order.Number)
 	if err != nil {
 		return err
 	}
@@ -38,9 +39,9 @@ func (s *OrderDataService) GetOrderData() error {
 }
 
 func (s *OrderDataService) UpdateOrder() error {
-	return s.Repo.UpdateOrderAccrual(s.Order.Number, s.Order.Status, s.Order.Accrual)
+	return s.Repo.UpdateOrderAccrual(context.Background(), s.Order.Number, s.Order.Status, s.Order.Accrual)
 }
 
 func (s *OrderDataService) GetOrdersForAccrual() ([]string, error) {
-	return s.Repo.SelectOrdersForAccrual()
+	return s.Repo.SelectOrdersForAccrual(context.Background())
 }
