@@ -56,7 +56,7 @@ func (h *Handler) UserRegister() http.HandlerFunc {
 
 		userService := service.NewUserDataService(user, h.repo)
 
-		err = userService.AddNewUser()
+		err = userService.AddNewUser(context.Background())
 		if err != nil {
 			if errors.Is(err, repository.ErrLoginAlreadyExists) {
 				res.WriteHeader(http.StatusConflict)
@@ -67,7 +67,7 @@ func (h *Handler) UserRegister() http.HandlerFunc {
 			return
 		}
 
-		err = userService.GetUserData()
+		err = userService.GetUserData(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -120,7 +120,7 @@ func (h *Handler) UserLogin() http.HandlerFunc {
 
 		userService := service.NewUserDataService(user, h.repo)
 
-		err = userService.GetUserData()
+		err = userService.GetUserData(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -169,7 +169,7 @@ func (h *Handler) SetOrder() http.HandlerFunc {
 		user := &model.User{Login: userLogin}
 		userService := service.NewUserDataService(user, h.repo)
 
-		ok, err := userService.CheckUser()
+		ok, err := userService.CheckUser(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -206,7 +206,7 @@ func (h *Handler) SetOrder() http.HandlerFunc {
 		}
 		orderService := service.NewOrderDataService(order, h.repo)
 
-		err = orderService.GetOrderData()
+		err = orderService.GetOrderData(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -224,7 +224,7 @@ func (h *Handler) SetOrder() http.HandlerFunc {
 		}
 
 		orderService.Order.UserID = userService.User.UserID
-		err = orderService.CreateOrder()
+		err = orderService.CreateOrder(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -252,7 +252,7 @@ func (h *Handler) GetOrders() http.HandlerFunc {
 
 		userService := service.NewUserDataService(user, h.repo)
 
-		ok, err := userService.CheckUser()
+		ok, err := userService.CheckUser(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -264,7 +264,7 @@ func (h *Handler) GetOrders() http.HandlerFunc {
 			return
 		}
 
-		orders, err := userService.GetUserOrders()
+		orders, err := userService.GetUserOrders(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -305,7 +305,7 @@ func (h *Handler) SetWithdraw() http.HandlerFunc {
 
 		userService := service.NewUserDataService(user, h.repo)
 
-		ok, err := userService.CheckUser()
+		ok, err := userService.CheckUser(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -342,14 +342,14 @@ func (h *Handler) SetWithdraw() http.HandlerFunc {
 
 		balanceService := service.NewBalanceService(userService.User, jsonData, h.repo)
 
-		userCurrent, err := balanceService.GetCurrent()
+		userCurrent, err := balanceService.GetCurrent(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		userWithdrawn, err := balanceService.GetWithdrawn()
+		userWithdrawn, err := balanceService.GetWithdrawn(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -364,7 +364,7 @@ func (h *Handler) SetWithdraw() http.HandlerFunc {
 			return
 		}
 
-		err = balanceService.CreateWithdraw()
+		err = balanceService.CreateWithdraw(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -391,7 +391,7 @@ func (h *Handler) GetWithdrawals() http.HandlerFunc {
 
 		userService := service.NewUserDataService(user, h.repo)
 
-		ok, err := userService.CheckUser()
+		ok, err := userService.CheckUser(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -403,7 +403,7 @@ func (h *Handler) GetWithdrawals() http.HandlerFunc {
 			return
 		}
 
-		withdrawals, err := userService.GetUserWithdrawals()
+		withdrawals, err := userService.GetUserWithdrawals(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -438,7 +438,7 @@ func (h *Handler) GetBalance() http.HandlerFunc {
 
 		userService := service.NewUserDataService(user, h.repo)
 
-		ok, err := userService.CheckUser()
+		ok, err := userService.CheckUser(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -454,14 +454,14 @@ func (h *Handler) GetBalance() http.HandlerFunc {
 
 		balanceService := service.NewBalanceService(userService.User, jsonData, h.repo)
 
-		userCurrent, err := balanceService.GetCurrent()
+		userCurrent, err := balanceService.GetCurrent(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
-		userWithdrawn, err := balanceService.GetWithdrawn()
+		userWithdrawn, err := balanceService.GetWithdrawn(context.Background())
 		if err != nil {
 			log.Println(err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -551,7 +551,7 @@ func (h *Handler) GetOrdersAccrual() {
 			orderService.Order.Status = jsonData.Status
 			orderService.Order.Accrual = jsonData.Accrual
 
-			err = orderService.UpdateOrder()
+			err = orderService.UpdateOrder(context.Background())
 			if err != nil {
 				log.Println(err)
 				return

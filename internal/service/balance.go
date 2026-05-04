@@ -23,14 +23,14 @@ func NewBalanceService(user *model.UserData, withdraw *model.WithdrawInputItem, 
 	}
 }
 
-func (s *BalanceService) GetCurrent() (float32, error) {
-	return s.WithdrawRepo.SelectCurrent(context.Background(), s.User.UserID)
+func (s *BalanceService) GetCurrent(ctx context.Context) (float32, error) {
+	return s.WithdrawRepo.SelectCurrent(ctx, s.User.UserID)
 }
 
-func (s *BalanceService) GetWithdrawn() (float32, error) {
-	return s.WithdrawRepo.SelectWithdrawn(context.Background(), s.User.UserID)
+func (s *BalanceService) GetWithdrawn(ctx context.Context) (float32, error) {
+	return s.WithdrawRepo.SelectWithdrawn(ctx, s.User.UserID)
 }
 
-func (s *BalanceService) CreateWithdraw() error {
-	return s.WithdrawRepo.InsertNewWithdraw(context.Background(), s.User.UserID, s.Withdraw.Order, s.Withdraw.Sum)
+func (s *BalanceService) CreateWithdraw(ctx context.Context) error {
+	return s.WithdrawRepo.InsertNewWithdraw(ctx, s.User.UserID, s.Withdraw.Order, s.Withdraw.Sum)
 }

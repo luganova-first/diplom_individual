@@ -36,15 +36,15 @@ func (s *UserDataService) CheckPassword() bool {
 	return err == nil
 }
 
-func (s *UserDataService) AddNewUser() error {
+func (s *UserDataService) AddNewUser(ctx context.Context) error {
 	if err := s.hashPassword(); err != nil {
 		return err
 	}
-	return s.Repo.InsertNewUser(context.Background(), s.User.Login, s.User.PassHash)
+	return s.Repo.InsertNewUser(ctx, s.User.Login, s.User.PassHash)
 }
 
-func (s *UserDataService) GetUserData() error {
-	userID, passHash, err := s.Repo.SelectUserData(context.Background(), s.User.Login)
+func (s *UserDataService) GetUserData(ctx context.Context) error {
+	userID, passHash, err := s.Repo.SelectUserData(ctx, s.User.Login)
 	if err != nil {
 		return err
 	}
@@ -53,17 +53,17 @@ func (s *UserDataService) GetUserData() error {
 	return nil
 }
 
-func (s *UserDataService) CheckUser() (bool, error) {
-	if err := s.GetUserData(); err != nil {
+func (s *UserDataService) CheckUser(ctx context.Context) (bool, error) {
+	if err := s.GetUserData(ctx); err != nil {
 		return false, err
 	}
 	return s.User.UserID != 0 && s.User.PassHash != "", nil
 }
 
-func (s *UserDataService) GetUserOrders() ([]model.OrderItem, error) {
-	return s.Repo.(repository.OrderRepository).SelectUserOrders(context.Background(), s.User.UserID)
+func (s *UserDataService) GetUserOrders(ctx context.Context) ([]model.OrderItem, error) {
+	return s.Repo.(repository.OrderRepository).SelectUserOrders(ctx, s.User.UserID)
 }
 
-func (s *UserDataService) GetUserWithdrawals() ([]model.WithdrawOutputItem, error) {
-	return s.Repo.(repository.WithdrawRepository).SelectUserWithdrawals(context.Background(), s.User.UserID)
+func (s *UserDataService) GetUserWithdrawals(ctx context.Context) ([]model.WithdrawOutputItem, error) {
+	return s.Repo.(repository.WithdrawRepository).SelectUserWithdrawals(ctx, s.User.UserID)
 }

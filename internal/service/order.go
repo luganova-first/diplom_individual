@@ -21,12 +21,12 @@ func NewOrderDataService(order model.Order, repo repository.OrderRepository) *Or
 	}
 }
 
-func (s *OrderDataService) CreateOrder() error {
-	return s.Repo.InsertNewOrder(context.Background(), s.Order.UserID, s.Order.Number)
+func (s *OrderDataService) CreateOrder(ctx context.Context) error {
+	return s.Repo.InsertNewOrder(ctx, s.Order.UserID, s.Order.Number)
 }
 
-func (s *OrderDataService) GetOrderData() error {
-	orderData, err := s.Repo.SelectOrder(context.Background(), s.Order.Number)
+func (s *OrderDataService) GetOrderData(ctx context.Context) error {
+	orderData, err := s.Repo.SelectOrder(ctx, s.Order.Number)
 	if err != nil {
 		return err
 	}
@@ -38,10 +38,10 @@ func (s *OrderDataService) GetOrderData() error {
 	return nil
 }
 
-func (s *OrderDataService) UpdateOrder() error {
-	return s.Repo.UpdateOrderAccrual(context.Background(), s.Order.Number, s.Order.Status, s.Order.Accrual)
+func (s *OrderDataService) UpdateOrder(ctx context.Context) error {
+	return s.Repo.UpdateOrderAccrual(ctx, s.Order.Number, s.Order.Status, s.Order.Accrual)
 }
 
-func (s *OrderDataService) GetOrdersForAccrual() ([]string, error) {
-	return s.Repo.SelectOrdersForAccrual(context.Background())
+func (s *OrderDataService) GetOrdersForAccrual(ctx context.Context) ([]string, error) {
+	return s.Repo.SelectOrdersForAccrual(ctx)
 }
